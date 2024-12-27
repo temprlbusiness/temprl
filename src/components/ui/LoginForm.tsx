@@ -85,7 +85,7 @@ export function LoginForm({
               </div>
               <div className="text-center text-sm dark:text-gray-300">
                 Don&apos;t have an account?{" "}
-                <a href="#" className="underline underline-offset-4 dark:text-primary-foreground">
+                <a href="/main" className="underline underline-offset-4 dark:text-primary-foreground">
                   Sign up
                 </a>
               </div>
