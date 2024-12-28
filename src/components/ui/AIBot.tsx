@@ -269,8 +269,6 @@ export const AIBot = () => {
   );
 };
 
-<<<<<<< Updated upstream
+
 export default AIBot;
-=======
-export default AIBot;
->>>>>>> Stashed changes
+
