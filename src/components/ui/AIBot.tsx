@@ -14,6 +14,8 @@ export const AIBot = () => {
   const location = useLocation();
   const { question } = location.state || {};
   const [lock, setLock] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
   const [messages, setMessages] = useState<Message[]>(() => {
     const storedMessages = localStorage.getItem('ai-bot-messages');
@@ -67,11 +69,23 @@ export const AIBot = () => {
     }
   }, [messages]);
 
+  const handlePause = async () => {
+    setIsPaused(true);
+    if (readerRef.current) {
+      await readerRef.current.cancel();
+      readerRef.current = null;
+    }
+    setIsLoading(false);
+    setLock(false);
+  };
+
   const fetchBotResponse = async (userMessage: string) => {
     if (isLoading || lock) return;
 
     setIsLoading(true);
     setLock(true);
+    setIsPaused(false);
+    
     const message = {
       role: "user",
       content: userMessage,
@@ -92,6 +106,7 @@ export const AIBot = () => {
       }
 
       const reader = response.body!.getReader();
+      readerRef.current = reader;
       const decoder = new TextDecoder('utf-8');
       let botResponse = '';
 
@@ -99,6 +114,8 @@ export const AIBot = () => {
       setMessages(prevMessages => [...prevMessages, { text: '', sender: 'bot' }]);
 
       while (true) {
+        if (isPaused) break;
+        
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -113,14 +130,19 @@ export const AIBot = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching bot response:', error);
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { text: 'Error fetching response.', sender: 'bot' }
-      ]);
+      if (!isPaused) {
+        console.error('Error fetching bot response:', error);
+        setMessages(prevMessages => [
+          ...prevMessages,
+          { text: 'Error fetching response.', sender: 'bot' }
+        ]);
+      }
     } finally {
-      setIsLoading(false);
-      setLock(false);
+      if (!isPaused) {
+        setIsLoading(false);
+        setLock(false);
+      }
+      readerRef.current = null;
     }
   };
 
@@ -166,7 +188,7 @@ export const AIBot = () => {
                 className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`bg-gray-800 text-gray-300 p-4 max-w-6xl 
+                  className={`bg-gray-800 text-gray-300 p-10 max-w-6xl 
                     ${msg.sender === 'bot' && isLoading && index === messages.length - 1 ? 'animate-pulse' : ''}
                     ${msg.sender === 'user'
                       ? 'rounded-t-2xl rounded-bl-2xl rounded-br-sm'
@@ -209,7 +231,7 @@ export const AIBot = () => {
           </div>
         </div>
         
-          <div className="fixed bottom-0 right-0 z-50 p-6  flex flex-col bg-gray-950 items-center w-full md:w-[calc(100%-260px)] pointer-events-auto px-4">
+          <div className="fixed bottom-0 right-0 z-50 p-6  flex flex-col  items-center w-full md:w-[calc(100%-260px)] pointer-events-auto px-4">
             <div className="flex items-center bg-gray-800 rounded-xl p-3 w-full max-w-[800px] shadow-lg mx-auto">
               <input
                 type="text"
@@ -221,14 +243,24 @@ export const AIBot = () => {
                 disabled={isLoading}
                 aria-label="Message input"
               />
-              <button
-                onClick={handleSend}
-                className={`text-gray-400 rounded-r-md ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:text-white'}`}
-                disabled={isLoading}
-                aria-label="Send message"
-              >
-                <span className="material-icons">send</span>
-              </button>
+              {isLoading ? (
+                <button
+                  onClick={handlePause}
+                  className="text-gray-400 hover:text-white px-4"
+                  aria-label="Pause response"
+                >
+                  <span className="material-icons">pause</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  className={`text-gray-400 rounded-r-md ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:text-white'}`}
+                  disabled={isLoading}
+                  aria-label="Send message"
+                >
+                  <span className="material-icons">send</span>
+                </button>
+              )}
             </div>
           </div>
       </div>
@@ -237,4 +269,8 @@ export const AIBot = () => {
   );
 };
 
+<<<<<<< Updated upstream
 export default AIBot;
+=======
+export default AIBot;
+>>>>>>> Stashed changes
